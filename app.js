@@ -50,10 +50,10 @@ function analyzePrices(fullHist) {
   if (activeHist.length === 0) activeHist = fullHist;
 
   const prices = activeHist.map(h => h.price);
-  const current = prices[prices.length - 1];
+  const current = prices.at(-1);
   
   const sortedPrices = [...prices].sort((a, b) => a - b);
-  const median = sortedPrices[Math.floor(sortedPrices.length / 2)];
+  const median = sortedPrices.at(Math.floor(sortedPrices.length / 2));
   
   let cleanPrices = prices.filter(p => p > median * 0.4 && p < median * 2.5);
   let hasAnomaly = cleanPrices.length !== prices.length;
@@ -78,7 +78,7 @@ function analyzePrices(fullHist) {
     const xs = Array.from({ length: n }, (_, i) => i);
     const sumX = xs.reduce((a, b) => a + b, 0);
     const sumY = win.reduce((a, b) => a + b, 0);
-    const sumXY = xs.reduce((s, x, i) => s + x * win[i], 0);
+    const sumXY = xs.reduce((s, x, i) => s + x * win.at(i), 0);
     const sumX2 = xs.reduce((s, x) => s + x * x, 0);
     const denom = n * sumX2 - sumX * sumX;
     trendSlope = denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
@@ -302,7 +302,6 @@ const FILTER_OPTIONS = [
   { label: '3м', days: 90 },
   { label: 'Всё', days: 0 }
 ];
-
 function utf8ToBase64(str) {
 return btoa(unescape(encodeURIComponent(str)));
 }
@@ -312,7 +311,7 @@ return decodeURIComponent(escape(atob(str)));
 function blobToBase64(blob) {
 return new Promise((resolve, reject) => {
 const reader = new FileReader();
-reader.onloadend = () => resolve(reader.result.split(',')[1]);
+reader.onloadend = () => resolve(reader.result.split(',').at(1));
 reader.onerror = reject;
 reader.readAsDataURL(blob);
 });
@@ -491,7 +490,7 @@ const photoRemove = $('#photo-remove');
 const PLACEHOLDER_IMG =  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <rect x="3" y="3" width="18" height="18" rx="3"/> <circle cx="9" cy="9" r="2"/> <path d="M21 15l-5-5L5 21"/> </svg> <span>Загрузить</span>;
 if (photoInput) {
 photoInput.addEventListener('change', e => {
-const file = e.target.files[0];
+const file = e.target.files.item(0);
 if (!file) return;
 pendingPhotoFile = file;
 const reader = new FileReader();
@@ -571,14 +570,14 @@ const range = max - min || 1;
 const pts = prices.map((p, i) => {
 const x = (i / (prices.length - 1)) * W;
 const y = H - PAD_Y - ((p - min) / range) * (H - PAD_Y * 2);
-return [x, y];
+return { x, y };
 });
-let linePath = M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)};
+let linePath = M${pts.at(0).x.toFixed(2)},${pts.at(0).y.toFixed(2)};
 for (let i = 0; i < pts.length - 1; i++) {
-const p0 = pts[i];
-const p1 = pts[i + 1];
-const cx = (p0[0] + p1[0]) / 2;
-linePath +=  C${cx.toFixed(2)},${p0[1].toFixed(2)} ${cx.toFixed(2)},${p1[1].toFixed(2)} ${p1[0].toFixed(2)},${p1[1].toFixed(2)};
+const p0 = pts.at(i);
+const p1 = pts.at(i + 1);
+const cx = (p0.x + p1.x) / 2;
+linePath +=  C${cx.toFixed(2)},${p0.y.toFixed(2)} ${cx.toFixed(2)},${p1.y.toFixed(2)} ${p1.x.toFixed(2)},${p1.y.toFixed(2)};
 }
 const areaPath = linePath +  L${W},${H} L0,${H} Z;
 const gid = 'g-' + Math.random().toString(36).slice(2, 8);
@@ -586,9 +585,10 @@ const aid = 'a-' + gid;
 const hoverZones = filteredHist.map((h, i) => {
 const x = (i / (filteredHist.length - 1)) * W;
 const zoneW = W / (filteredHist.length - 1);
-return <rect class="chart-hover-zone"  data-x="${x}" data-y="${pts[i][1]}"  data-price="${h.price}" data-date="${h.date}"  x="${x - zoneW/2}" y="0" width="${zoneW}" height="${H}" />;
+return <rect class="chart-hover-zone"  data-x="${x}" data-y="${pts.at(i).y}"  data-price="${h.price}" data-date="${h.date}"  x="${x - zoneW/2}" y="0" width="${zoneW}" height="${H}" />;
 }).join('');
 const tabsHtml = FILTER_OPTIONS.map(opt => <button class="chart-tab ${activeFilter === opt.days ? 'active' : ''}"  data-product-id="${productId}"  data-days="${opt.days}"> ${opt.label} </button>).join('');
+const lastPt = pts.at(-1);
 return `
 
 ${tabsHtml}
@@ -598,8 +598,8 @@ ${formatPriceShort(max)}
 ${formatPriceShort(min)}
 
 
-${formatDate(filteredHist[0].date)}
-${formatDate(filteredHist[filteredHist.length - 1].date)}
+${formatDate(filteredHist.at(0).date)}
+${formatDate(filteredHist.at(-1).date)}
 
 `;
 }
@@ -626,8 +626,8 @@ attachTooltips();
 }
 function renderProduct(product, photoURL) {
 const hist = [...product.history].sort((a, b) => new Date(a.date) - new Date(b.date));
-const current = hist[hist.length - 1].price;
-const first = hist[0].price;
+const current = hist.at(-1).price;
+const first = hist.at(0).price;
 const maxPrice = Math.max(...hist.map(h => h.price));
 const minPrice = Math.min(...hist.map(h => h.price));
 const analysis = analyzePrices(hist);
