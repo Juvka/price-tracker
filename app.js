@@ -660,31 +660,20 @@ function buildChart(hist, productId, activeFilter = 0) {
   const minPt = pts.at(minIdx);
   const maxPt = pts.at(maxIdx);
 
-  let extremaSvg = '';
+  let extremaHtml = '';
   if (max !== min) {
-    const maxAnchor = maxPt.x < 65 ? 'start' : maxPt.x > W - 65 ? 'end' : 'middle';
-    const minAnchor = minPt.x < 65 ? 'start' : minPt.x > W - 65 ? 'end' : 'middle';
-    
-    extremaSvg = `
-      <g class="chart-extrema">
-        <circle cx="${maxPt.x.toFixed(2)}" cy="${maxPt.y.toFixed(2)}" r="3.5" class="extrema-dot max" />
-        <text x="${maxPt.x.toFixed(2)}" y="${(maxPt.y - 8).toFixed(2)}" text-anchor="${maxAnchor}" class="extrema-label max">
-          Макс ${formatPriceShort(max)}
-        </text>
-        
-        <circle cx="${minPt.x.toFixed(2)}" cy="${minPt.y.toFixed(2)}" r="3.5" class="extrema-dot min" />
-        <text x="${minPt.x.toFixed(2)}" y="${(minPt.y + 15).toFixed(2)}" text-anchor="${minAnchor}" class="extrema-label min">
-          Мин ${formatPriceShort(min)}
-        </text>
-      </g>
+    const maxLeft = Math.max(8, Math.min(92, (maxPt.x / W) * 100));
+    const maxTop = (maxPt.y / H) * 100;
+    const minLeft = Math.max(8, Math.min(92, (minPt.x / W) * 100));
+    const minTop = (minPt.y / H) * 100;
+
+    extremaHtml = `
+      <div class="chart-extrema-html">
+        <span class="extrema-tag max" style="left:${maxLeft}%; top:${maxTop}%">Макс ${formatPriceShort(max)}</span>
+        <span class="extrema-tag min" style="left:${minLeft}%; top:${minTop}%">Мин ${formatPriceShort(min)}</span>
+      </div>
     `;
   }
-
-  // Промежуточные точки
-  const pointsSvg = pts.length <= 25 ? pts.map((pt, idx) => {
-    if (idx === pts.length - 1 || (max !== min && (idx === minIdx || idx === maxIdx))) return '';
-    return `<circle cx="${pt.x.toFixed(2)}" cy="${pt.y.toFixed(2)}" r="2.2" class="chart-point" />`;
-  }).join('') : '';
 
   const hoverZones = pts.map((pt, i) => {
     const zoneW = plotW / (pts.length - 1);
@@ -707,8 +696,6 @@ function buildChart(hist, productId, activeFilter = 0) {
       ${opt.label}
     </button>
   `).join('');
-
-  const lastPt = pts.at(-1);
 
   return `
     <div class="chart-wrap">
@@ -734,13 +721,6 @@ function buildChart(hist, productId, activeFilter = 0) {
               <stop offset="85%" stop-color="var(--accent-2)" stop-opacity="0.04"/>
               <stop offset="100%" stop-color="var(--accent-2)" stop-opacity="0"/>
             </linearGradient>
-            <filter id="${glowId}" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
           </defs>
 
           <g class="chart-grid">
@@ -750,22 +730,16 @@ function buildChart(hist, productId, activeFilter = 0) {
           </g>
 
           <path class="chart-area" d="${areaPath}" style="fill:url(#${aid})"/>
-          <path class="chart-line" d="${linePath}" style="stroke:url(#${gid}); filter:url(#${glowId})"/>
-          
-          ${pointsSvg}
-          ${extremaSvg}
-
-          <circle class="chart-dot-pulse" cx="${lastPt.x.toFixed(2)}" cy="${lastPt.y.toFixed(2)}" r="6" />
-          <circle class="chart-dot-last" cx="${lastPt.x.toFixed(2)}" cy="${lastPt.y.toFixed(2)}" r="3.8" />
+          <path class="chart-line" d="${linePath}" style="stroke:url(#${gid}); vector-effect:non-scaling-stroke;"/>
 
           <g class="chart-interaction" style="display:none;">
-            <line class="chart-hover-line" x1="0" y1="${PAD_T - 6}" x2="0" y2="${bottomY}" />
-            <circle class="chart-hover-ring" cx="0" cy="0" r="6.5" />
-            <circle class="chart-hover-dot" cx="0" cy="0" r="3.5" />
+            <line class="chart-hover-line" x1="0" y1="${PAD_T - 6}" x2="0" y2="${bottomY}" style="vector-effect:non-scaling-stroke;" />
           </g>
 
           ${hoverZones}
         </svg>
+
+        ${extremaHtml}
 
         <div class="chart-tooltip" style="display:none;">
           <div class="tt-top">
