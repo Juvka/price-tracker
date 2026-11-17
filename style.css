@@ -1163,3 +1163,31 @@ td.action-cell { text-align: right; width: 40px; }
   font-family: var(--font-mono);
   font-size: 10.5px;
 }
+
+.chart-extrema-html {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.extrema-tag {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.extrema-tag.max {
+  transform: translate(-50%, -125%);
+  color: var(--up);
+  background: rgba(255, 77, 109, 0.14);
+}
+
+.extrema-tag.min {
+  transform: translate(-50%, 25%);
+  color: var(--down);
+  background: rgba(45, 212, 167, 0.14);
+}
