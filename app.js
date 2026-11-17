@@ -27,6 +27,7 @@ function escapeHtml(str) {
 let toastTimer;
 function toast(msg, isError = false) {
   const el = $('#toast');
+  if (!el) return;
   el.textContent = msg;
   el.className = 'toast show' + (isError ? ' error' : '');
   clearTimeout(toastTimer);
@@ -433,8 +434,10 @@ return url;
 // НАСТРОЙКА ПОДКЛЮЧЕНИЯ К GITHUB
 // ==================================================
 function showSetupScreen() {
-$('#app-screen').style.display = 'none';
+const appScreen = $('#app-screen');
+if (appScreen) appScreen.style.display = 'none';
 const setup = $('#setup-screen');
+if (!setup) return;
 setup.style.display = 'flex';
 setup.innerHTML = `
 
@@ -465,8 +468,10 @@ try {
 toast('Синхронизация с GitHub...');
 data = await readDataFile();
 if (!data.products) data.products = [];
-$('#setup-screen').style.display = 'none';
-$('#app-screen').style.display = 'block';
+const setup = $('#setup-screen');
+const appScreen = $('#app-screen');
+if (setup) setup.style.display = 'none';
+if (appScreen) appScreen.style.display = 'block';
 const folderBtnText = $('#folder-btn-text');
 if (folderBtnText) folderBtnText.textContent = 'Настройки GitHub';
 await render();
@@ -484,6 +489,7 @@ const photoInput = $('#product-photo');
 const photoPreview = $('#photo-preview');
 const photoRemove = $('#photo-remove');
 const PLACEHOLDER_IMG =  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <rect x="3" y="3" width="18" height="18" rx="3"/> <circle cx="9" cy="9" r="2"/> <path d="M21 15l-5-5L5 21"/> </svg> <span>Загрузить</span>;
+if (photoInput) {
 photoInput.addEventListener('change', e => {
 const file = e.target.files[0];
 if (!file) return;
@@ -496,20 +502,25 @@ photoRemove.hidden = false;
 reader.readAsDataURL(file);
 e.target.value = '';
 });
+}
+if (photoRemove) {
 photoRemove.addEventListener('click', e => {
 e.preventDefault();
 e.stopPropagation();
 resetPhotoPicker();
 });
+}
 function resetPhotoPicker() {
 pendingPhotoFile = null;
-photoPreview.innerHTML = PLACEHOLDER_IMG;
-photoRemove.hidden = true;
+if (photoPreview) photoPreview.innerHTML = PLACEHOLDER_IMG;
+if (photoRemove) photoRemove.hidden = true;
 }
 // ==================================================
 // ДОБАВЛЕНИЕ ТОВАРА
 // ==================================================
-$('#product-form').addEventListener('submit', async e => {
+const productForm = $('#product-form');
+if (productForm) {
+productForm.addEventListener('submit', async e => {
 e.preventDefault();
 if (!ghConfig) { toast('Сначала настройте GitHub', true); return; }
 const name = $('#product-name').value.trim();
@@ -538,6 +549,7 @@ toast('Ошибка: ' + err.message, true);
 btn.disabled = false;
 }
 });
+}
 // ==================================================
 // ГРАФИК
 // ==================================================
@@ -596,6 +608,7 @@ ${formatDate(filteredHist[filteredHist.length - 1].date)}
 // ==================================================
 async function render() {
 const container = $('#products');
+if (!container) return;
 if (!data.products || data.products.length === 0) {
 container.innerHTML =  <div class="empty glass-panel"> <div class="empty-icon">📈</div> <p>Пока нет ни одного товара.<br>Добавьте первый, чтобы начать отслеживать цены.</p> </div>;
 return;
