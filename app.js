@@ -723,7 +723,7 @@ function buildChart(hist, productId, activeFilter = 0) {
       </div>
       
       <div class="chart-canvas">
-        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:100%;">
           <defs>
             <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stop-color="var(--accent-2)"/>
