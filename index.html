@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price Tracker — динамика цен</title>
+  <script>
+    (function () {
+      const saved = localStorage.getItem('pt-theme');
+      const theme = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+
+      const savedView = localStorage.getItem('pt-view') || 'list';
+      document.documentElement.setAttribute('data-view', savedView);
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="container">
+
+    <!-- ============ ШАПКА ============ -->
+    <header class="topbar glass-panel">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 17 9 11 13 15 21 7"/>
+              <polyline points="15 7 21 7 21 13"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Price Tracker</h1>
+            <p>Отслеживание динамики стоимости</p>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <!-- Переключатель темы -->
+          <label class="switch" title="Сменить тему">
+            <input type="checkbox" id="theme-toggle">
+            <span class="slider">
+              <div class="star star_1"></div>
+              <div class="star star_2"></div>
+              <div class="star star_3"></div>
+              <svg viewBox="0 0 16 16" class="cloud_1 cloud">
+                <path transform="matrix(.77976 0 0 .78395-299.99-418.63)" fill="#fff" d="m391.84 540.91c-.421-.329-.949-.524-1.523-.524-1.351 0-2.451 1.084-2.485 2.435-1.395.526-2.388 1.88-2.388 3.466 0 1.874 1.385 3.423 3.182 3.667v.034h12.73v-.006c1.775-.104 3.182-1.584 3.182-3.395 0-1.747-1.309-3.186-2.994-3.379.007-.106.011-.214.011-.322 0-2.707-2.271-4.901-5.072-4.901-2.073 0-3.856 1.202-4.643 2.925"></path>
+              </svg>
+            </span>
+          </label>
+          
+          <!-- Переключатель вида (список/сетка) -->
+          <button id="view-toggle" class="btn-icon" title="Сменить вид" aria-label="Сменить вид"></button>
+          
+          <!-- Кнопка "Сменить папку" с 3D-папкой -->
+          <button id="folder-btn" class="btn btn-ghost folder-btn-3d" title="Выбрать папку для данных">
+            <div class="uiverse-folder-wrapper">
+              <div class="uiverse-folder">
+                <div class="uiverse-work-5"></div>
+                <div class="uiverse-work-4"></div>
+                <div class="uiverse-work-3"></div>
+                <div class="uiverse-work-2"></div>
+                <div class="uiverse-work-1"></div>
+              </div>
+            </div>
+            <span id="folder-btn-text">Сменить папку</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ ЭКРАН ВЫБОРА ПАПКИ ============ -->
+    <div id="setup-screen" class="setup" style="display:none;">
+      <div class="setup-card glass-panel">
+        <div class="setup-icon">📂</div>
+        <h2>Выберите папку для хранения данных</h2>
+        <p>Все товары, цены и фотографии будут сохраняться <b>реальными файлами</b> в выбранной папке. Выбирайте <b>ту же папку</b>, где лежат <code>index.html</code>, <code>style.css</code> и <code>app.js</code> — тогда всё будет в одном месте.</p>
+        <p class="setup-warning">⚠️ Работает в Chrome, Edge, Opera, Яндекс.Браузере. В Firefox и Safari — нет.</p>
+        <button id="choose-folder-btn" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Выбрать папку</span>
+        </button>
+        <p id="setup-error" class="setup-error" style="display:none;"></p>
+      </div>
+    </div>
+
+    <!-- ============ ОСНОВНОЙ ИНТЕРФЕЙС ============ -->
+    <div id="app-screen" style="display:none;">
+
+      <!-- Форма добавления -->
+      <section class="composer glass-panel">
+        <form id="product-form" class="composer-form">
+          <div class="field field-photo">
+            <label for="product-photo">Фото товара</label>
+            <label class="photo-upload" for="product-photo">
+              <input type="file" id="product-photo" accept="image/*" hidden>
+              <div class="photo-preview" id="photo-preview">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="3"/>
+                  <circle cx="9" cy="9" r="2"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+                <span>Загрузить</span>
+              </div>
+              <button type="button" class="photo-remove" id="photo-remove" title="Убрать фото" hidden>✕</button>
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="product-name">Название товара</label>
+            <input type="text" id="product-name" placeholder="Например, iPhone 15 Pro" required autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="product-price">Начальная цена, ₽</label>
+            <input type="number" id="product-price" placeholder="0.00" step="0.01" min="0" required>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Добавить</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- Список товаров -->
+      <section id="products" class="products"></section>
+
+      <footer class="foot">
+        <p>Данные и фото лежат в выбранной папке. Для бэкапа — скопируйте папку.</p>
+      </footer>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

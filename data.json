@@ -1,0 +1,177 @@
+{
+  "products": [
+    {
+      "id": "mwkaf9yef067wz",
+      "name": "Bosch MFQ4080 Ручной миксер, 500 Вт",
+      "photo": "photo-1794895477222-mwkaf9wmcrbuup.jpg",
+      "history": [
+        {
+          "id": "mwkaf9ye01xiw1",
+          "price": 8453,
+          "date": "2026-11-17T06:04:37.286Z"
+        },
+        {
+          "id": "mwkt60u16yw6vx",
+          "price": 8435,
+          "date": "2026-11-17T14:49:18.265Z"
+        }
+      ]
+    },
+    {
+      "id": "mwkajzz9h7mqz0",
+      "name": "Гидромассажная ванночка Atlanta ATH-6417",
+      "photo": "photo-1794895697571-mwkajzxfqp8j9z.jpg",
+      "history": [
+        {
+          "id": "mwkajzz9nn8to6",
+          "price": 8273,
+          "date": "2026-11-17T06:08:17.637Z"
+        },
+        {
+          "id": "mwkkhmsii1dulw",
+          "price": 8267,
+          "date": "2026-11-17T10:46:23.394Z"
+        },
+        {
+          "id": "mwkt3ujntvd4zs",
+          "price": 8204,
+          "date": "2026-11-17T14:47:36.803Z"
+        }
+      ]
+    },
+    {
+      "id": "mwkal8bkjfv735",
+      "name": "Apple AirPods 5",
+      "photo": "photo-1794895754996-mwkal88kcxtts1.jpg",
+      "history": [
+        {
+          "id": "mwkal8bkhwit4u",
+          "price": 14328,
+          "date": "2026-11-17T06:09:15.104Z"
+        },
+        {
+          "id": "mwkki7oekbpikd",
+          "price": 14291,
+          "date": "2026-11-17T10:46:50.462Z"
+        },
+        {
+          "id": "mwkt5n8lqlmf5v",
+          "price": 14291,
+          "date": "2026-11-17T14:49:00.645Z"
+        }
+      ]
+    },
+    {
+      "id": "mwkanbyfxrc6uc",
+      "name": "Амортизатор задний левый FENOX A62042",
+      "photo": "photo-1794895853067-mwkanbwrlmch2d.jpg",
+      "history": [
+        {
+          "id": "mwkanbyf1dvwdb",
+          "price": 4369,
+          "date": "2026-11-17T06:10:53.127Z"
+        },
+        {
+          "id": "mwkkinbaz8ckk0",
+          "price": 4350,
+          "date": "2026-11-17T10:47:10.726Z"
+        },
+        {
+          "id": "mwkt6b14kav0g2",
+          "price": 4481,
+          "date": "2026-11-17T14:49:31.480Z"
+        }
+      ]
+    },
+    {
+      "id": "mwkarilenwybpd",
+      "name": "Процессор AMD Ryzen 7 5700X",
+      "photo": "photo-1794896048285-mwkarijhbhxo82.jpg",
+      "history": [
+        {
+          "id": "mwkarilea4506l",
+          "price": 14043,
+          "date": "2026-11-17T06:14:08.354Z"
+        },
+        {
+          "id": "mwkkizimg6jg29",
+          "price": 14192,
+          "date": "2026-11-17T10:47:26.542Z"
+        },
+        {
+          "id": "mwkt75ij547tdi",
+          "price": 14192,
+          "date": "2026-11-17T14:50:10.987Z"
+        }
+      ]
+    },
+    {
+      "id": "mwklnuygpc1c1j",
+      "name": "Арки ремонтные комплект",
+      "photo": "photo-1794914353385-mwklnuuhlj29gs.jpg",
+      "history": [
+        {
+          "id": "mwklnuygayco7q",
+          "price": 2115,
+          "date": "2026-11-17T11:19:13.528Z"
+        },
+        {
+          "id": "mwkt6nfokfigrz",
+          "price": 2081,
+          "date": "2026-11-17T14:49:47.556Z"
+        }
+      ]
+    },
+    {
+      "id": "mwklovs6p4n760",
+      "name": "Опора двигателя",
+      "photo": "photo-1794914401189-mwklovqdazl8fy.jpg",
+      "history": [
+        {
+          "id": "mwklovs6db9m26",
+          "price": 2085,
+          "date": "2026-11-17T11:20:01.254Z"
+        },
+        {
+          "id": "mwkt4s72a6sqr9",
+          "price": 2043,
+          "date": "2026-11-17T14:48:20.414Z"
+        }
+      ]
+    },
+    {
+      "id": "mwklq6cd6mjkax",
+      "name": "Четыре полосы Skydimo 32`",
+      "photo": "photo-1794914461526-mwklq6aewjoi8q.jpg",
+      "history": [
+        {
+          "id": "mwklq6cd30athc",
+          "price": 2529,
+          "date": "2026-11-17T11:21:01.597Z"
+        },
+        {
+          "id": "mwkt5alyz3s29u",
+          "price": 2487,
+          "date": "2026-11-17T14:48:44.278Z"
+        }
+      ]
+    },
+    {
+      "id": "mwklrbyxp62ksy",
+      "name": "Электрическая сушилка для обуви Тимсон 2440",
+      "photo": "photo-1794914515478-mwklrbx2itqmh0.jpg",
+      "history": [
+        {
+          "id": "mwklrbyx6fhq3h",
+          "price": 2784,
+          "date": "2026-11-17T11:21:55.545Z"
+        },
+        {
+          "id": "mwkt4j69icjgan",
+          "price": 2755,
+          "date": "2026-11-17T14:48:08.721Z"
+        }
+      ]
+    }
+  ]
+}
