@@ -31,6 +31,8 @@
     <!-- ============ ШАПКА ============ -->
     <header class="topbar glass-panel">
       <div class="topbar-inner">
+        
+        <!-- Логотип и бренд -->
         <div class="brand">
           <div class="logo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -44,6 +46,17 @@
           </div>
         </div>
 
+        <!-- Поиск (ограничен по ширине) -->
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="search-input" placeholder="Поиск товаров..." autocomplete="off">
+          <button id="search-clear" class="search-clear" title="Очистить" hidden>✕</button>
+        </div>
+
+        <!-- Кнопки управления -->
         <div class="topbar-actions">
           <!-- Переключатель темы -->
           <label class="switch" title="Сменить тему">
@@ -61,8 +74,8 @@
           <!-- Переключатель вида (список/сетка) -->
           <button id="view-toggle" class="btn-icon" title="Сменить вид" aria-label="Сменить вид"></button>
           
-          <!-- Кнопка "Сменить папку" с 3D-папкой -->
-          <button id="folder-btn" class="btn btn-ghost folder-btn-3d" title="Выбрать папку для данных">
+          <!-- Кнопка "Настройки GitHub" -->
+          <button id="folder-btn" class="btn btn-ghost folder-btn-3d" title="Настроить подключение к GitHub">
             <div class="uiverse-folder-wrapper">
               <div class="uiverse-folder">
                 <div class="uiverse-work-5"></div>
@@ -72,7 +85,7 @@
                 <div class="uiverse-work-1"></div>
               </div>
             </div>
-            <span id="folder-btn-text">Сменить папку</span>
+            <span id="folder-btn-text">Настройки GitHub</span>
           </button>
         </div>
       </div>

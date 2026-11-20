@@ -131,8 +131,21 @@ function analyzePrices(fullHist) {
     color = 'bad';
   }
 
-  if (color === 'neutral' && trend === 'down' && !isCurrentAnomaly) advice = 'Цена падает — стоит подождать.';
-  if (color === 'good' && trend === 'up') advice = 'Цена растёт — лучше брать сейчас.';
+  if (trend === 'up') {
+    if (color === 'great') {
+      verdict = 'Хорошая цена';
+      advice = 'Цена растёт — лучше брать сейчас, пока не подорожала.';
+      color = 'good';
+    } else if (color === 'good') {
+      advice = 'Цена растёт — лучше брать сейчас.';
+    }
+  } else if (trend === 'down') {
+    if (color === 'bad') {
+      verdict = 'Средняя цена';
+      advice = 'Цена падает — стоит подождать ещё.';
+      color = 'neutral';
+    }
+  }
 
   return {
     current, min, max, avg,
@@ -295,13 +308,16 @@ let data = { products: [] };
 let dataFileSha = null;
 let pendingPhotoFile = null;
 const photoUrlCache = new Map();
+let searchQuery = '';
 
-const chartFilters = {}; 
 const FILTER_OPTIONS = [
-  { label: '7д', days: 7 },
-  { label: '1м', days: 30 },
-  { label: '3м', days: 90 },
-  { label: 'Всё', days: 0 }
+  { label: '12ч', ms: 12 * 60 * 60 * 1000 },
+  { label: '24ч', ms: 24 * 60 * 60 * 1000 },
+  { label: '3д', ms: 3 * 24 * 60 * 60 * 1000 },
+  { label: '7д', ms: 7 * 24 * 60 * 60 * 1000 },
+  { label: '14д', ms: 14 * 24 * 60 * 60 * 1000 },
+  { label: '1м', ms: 30 * 24 * 60 * 60 * 1000 },
+  { label: 'Всё', ms: 0 }
 ];
 
 function utf8ToBase64(str) {
@@ -597,7 +613,7 @@ if (productForm) {
 // ==================================================
 // ДИЗАЙНЕРСКИЙ ГРАФИК
 // ==================================================
-function buildChart(hist, productId, activeFilter = 0) {
+function buildChart(hist, productId, activeFilterMs = 0) {
   if (hist.length < 2) {
     return `
       <div class="chart-wrap chart-empty">
@@ -606,10 +622,16 @@ function buildChart(hist, productId, activeFilter = 0) {
   }
 
   let filteredHist = [...hist];
-  if (activeFilter > 0) {
-    const cutoff = Date.now() - activeFilter * 24 * 60 * 60 * 1000;
+  let isFallback = false;
+  
+  if (activeFilterMs > 0) {
+    const cutoff = Date.now() - activeFilterMs;
     filteredHist = hist.filter(h => new Date(h.date).getTime() >= cutoff);
-    if (filteredHist.length < 2) filteredHist = [...hist];
+    
+    if (filteredHist.length < 2) {
+      filteredHist = [...hist];
+      isFallback = true;
+    }
   }
 
   const prices = filteredHist.map(h => h.price);
@@ -639,7 +661,6 @@ function buildChart(hist, productId, activeFilter = 0) {
     return { x, y, price: p, date: filteredHist.at(i).date };
   });
 
-  // Плавная кривая Безье
   let linePath = `M${pts.at(0).x.toFixed(2)},${pts.at(0).y.toFixed(2)}`;
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts.at(i);
@@ -650,11 +671,9 @@ function buildChart(hist, productId, activeFilter = 0) {
   const bottomY = H - PAD_B + 10;
   const areaPath = `${linePath} L${pts.at(-1).x.toFixed(2)},${bottomY} L${pts.at(0).x.toFixed(2)},${bottomY} Z`;
 
-  const gid = 'g-' + Math.random().toString(36).slice(2, 8);
-  const aid = 'a-' + gid;
-  const glowId = 'glow-' + gid;
+  const gid = 'g-' + productId;
+  const aid = 'a-' + productId;
 
-  // Точки минимума и максимума
   const minIdx = prices.indexOf(min);
   const maxIdx = prices.lastIndexOf(max);
   const minPt = pts.at(minIdx);
@@ -690,9 +709,9 @@ function buildChart(hist, productId, activeFilter = 0) {
   }).join('');
 
   const tabsHtml = FILTER_OPTIONS.map(opt => `
-    <button class="chart-tab ${activeFilter === opt.days ? 'active' : ''}" 
+    <button class="chart-tab ${activeFilterMs === opt.ms ? 'active' : ''}" 
             data-product-id="${productId}" 
-            data-days="${opt.days}">
+            data-ms="${opt.ms}">
       ${opt.label}
     </button>
   `).join('');
@@ -701,7 +720,7 @@ function buildChart(hist, productId, activeFilter = 0) {
     <div class="chart-wrap">
       <div class="chart-header">
         <div class="chart-period-stat">
-          <span class="chart-period-title">За период</span>
+          <span class="chart-period-title">${isFallback ? 'Мало данных за период' : 'За период'}</span>
           <span class="chart-period-badge ${periodClass}">
             ${periodSign}${formatPriceShort(periodDiff)} (${periodSign}${periodPct}%)
           </span>
@@ -774,17 +793,36 @@ async function render() {
     return;
   }
 
+  const filtered = data.products.filter(p => 
+    !searchQuery || p.name.toLowerCase().includes(searchQuery)
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty glass-panel">
+        <div class="empty-icon">🔍</div>
+        <p>Ничего не найдено по запросу «${escapeHtml(searchQuery)}».</p>
+      </div>`;
+    return;
+  }
+
   const photoUrls = new Map();
-  for (const p of data.products) {
+  for (const p of filtered) {
     if (p.photo) {
       const url = await getPhotoURL(p.photo);
       if (url) photoUrls.set(p.id, url);
     }
   }
 
-  container.innerHTML = data.products.map(p => renderProduct(p, photoUrls.get(p.id))).join('');
-  attachHandlers();
-  attachTooltips();
+  container.innerHTML = filtered.map(p => renderProduct(p, photoUrls.get(p.id))).join('');
+  
+  // Ждем кадр, чтобы DOM отрендерился
+  requestAnimationFrame(() => {
+    attachHandlers();
+    attachTooltips();
+    // Инициализируем высоту таблицы после того, как всё отрисовалось
+    initTableHeights();
+  });
 }
 
 function renderProduct(product, photoURL) {
@@ -801,8 +839,9 @@ function renderProduct(product, photoURL) {
   const diffClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
   const diffSign = diff > 0 ? '+' : '';
 
-  const activeFilter = chartFilters[product.id] || 0;
-  const chart = buildChart(hist, product.id, activeFilter);
+  const savedFilterMs = Number(localStorage.getItem(`pt-filter-${product.id}`));
+  const activeFilterMs = !isNaN(savedFilterMs) ? savedFilterMs : 0;
+  const chart = buildChart(hist, product.id, activeFilterMs);
 
   const thumb = photoURL
     ? `<div class="product-thumb" data-lightbox="${photoURL}" data-tooltip="Нажмите, чтобы увеличить">
@@ -817,14 +856,32 @@ function renderProduct(product, photoURL) {
          </svg>
        </div>`;
 
-  const rows = [...hist].reverse().map(h => `
-    <tr>
-      <td class="date-cell">${formatDate(h.date)}</td>
-      <td class="price-cell">${formatPrice(h.price)}</td>
-      <td class="action-cell">
-        <button class="delete-price" data-product="${product.id}" data-entry="${h.id}" data-tooltip="Удалить эту запись">✕</button>
-      </td>
-    </tr>`).join('');
+  // Формируем строки таблицы
+  const allRowsReversed = [...hist].reverse();
+  const hasMore = allRowsReversed.length > 3;
+
+  const rows = allRowsReversed.map((h, index) => {
+    const hiddenClass = index >= 3 ? 'hidden-row' : '';
+    return `
+      <tr class="${hiddenClass}">
+        <td class="date-cell">${formatDate(h.date)}</td>
+        <td class="price-cell">${formatPrice(h.price)}</td>
+        <td class="action-cell">
+          <button class="delete-price" data-product="${product.id}" data-entry="${h.id}" data-tooltip="Удалить эту запись">✕</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const toggleBtnHtml = hasMore
+    ? `<div class="history-toggle-wrap">
+         <button class="history-toggle-btn" data-product-toggle="${product.id}">
+           <span>Показать все (${allRowsReversed.length})</span>
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+             <polyline points="6 9 12 15 18 9"/>
+           </svg>
+         </button>
+       </div>`
+    : '';
 
   const diffIcon = diff > 0
     ? '<polyline points="17 11 12 6 7 11"/><line x1="12" y1="18" x2="12" y2="6"/>'
@@ -904,12 +961,13 @@ function renderProduct(product, photoURL) {
         </button>
       </form>
 
-      <div class="history-wrap">
+      <div class="table-wrap ${hasMore ? 'is-collapsed' : ''}" data-product-table="${product.id}">
         <table>
           <thead><tr><th>Дата и время</th><th>Цена</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
+      ${toggleBtnHtml}
     </article>`;
 }
 
@@ -921,8 +979,6 @@ function attachChartHover(wrap) {
   const tooltip = wrap.querySelector('.chart-tooltip');
   const interaction = wrap.querySelector('.chart-interaction');
   const hoverLine = wrap.querySelector('.chart-hover-line');
-  const hoverRing = wrap.querySelector('.chart-hover-ring');
-  const hoverDot = wrap.querySelector('.chart-hover-dot');
   const ttPrice = wrap.querySelector('.tt-price');
   const ttDiff = wrap.querySelector('.tt-diff');
   const ttDate = wrap.querySelector('.tt-date');
@@ -935,7 +991,6 @@ function attachChartHover(wrap) {
     tooltip.style.display = 'flex';
 
     const x = parseFloat(zone.dataset.x);
-    const y = parseFloat(zone.dataset.y);
     const xPct = parseFloat(zone.dataset.xPct);
     const yPct = parseFloat(zone.dataset.yPct);
     const price = parseFloat(zone.dataset.price);
@@ -945,10 +1000,6 @@ function attachChartHover(wrap) {
 
     hoverLine.setAttribute('x1', x);
     hoverLine.setAttribute('x2', x);
-    hoverRing.setAttribute('cx', x);
-    hoverRing.setAttribute('cy', y);
-    hoverDot.setAttribute('cx', x);
-    hoverDot.setAttribute('cy', y);
 
     ttPrice.textContent = formatPrice(price);
     ttDate.textContent = formatDate(date);
@@ -985,6 +1036,52 @@ function attachChartHover(wrap) {
   svg.addEventListener('mouseleave', () => {
     interaction.style.display = 'none';
     tooltip.style.display = 'none';
+  });
+}
+
+function attachChartTabs(productEl, product) {
+  productEl.querySelectorAll('.chart-tab').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const ms = parseInt(btn.dataset.ms);
+      
+      localStorage.setItem(`pt-filter-${product.id}`, ms);
+      
+      const chartWrap = productEl.querySelector('.chart-wrap');
+      const hist = [...product.history].sort((a, b) => new Date(a.date) - new Date(b.date));
+      const newChartHtml = buildChart(hist, product.id, ms);
+      
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = newChartHtml;
+      const newChartEl = tempDiv.firstElementChild;
+      
+      chartWrap.replaceWith(newChartEl);
+      
+      attachChartHover(newChartEl);
+      attachChartTabs(productEl, product);
+    });
+  });
+}
+
+function initTableHeights() {
+  document.querySelectorAll('.product').forEach(productEl => {
+    const tableWrap = productEl.querySelector('.table-wrap');
+    if (tableWrap && tableWrap.classList.contains('is-collapsed')) {
+      const thead = tableWrap.querySelector('thead');
+      const tbody = tableWrap.querySelector('tbody');
+      if (thead && tbody) {
+        const headerHeight = thead.offsetHeight;
+        const rows = tbody.querySelectorAll('tr');
+        let threeRowsHeight = 0;
+        // Берем высоту первых трех строк
+        for (let i = 0; i < Math.min(3, rows.length); i++) {
+          threeRowsHeight += rows[i].offsetHeight;
+        }
+        // Добавляем 1px для границы, чтобы 3-я строка не обрезалась
+        const collapsedHeight = headerHeight + threeRowsHeight + 1;
+        tableWrap.style.setProperty('--collapsed-height', collapsedHeight + 'px');
+      }
+    }
   });
 }
 
@@ -1057,32 +1154,68 @@ function attachHandlers() {
     el.addEventListener('click', () => openLightbox(el.dataset.lightbox));
   });
 
-  document.querySelectorAll('.chart-wrap').forEach(wrap => attachChartHover(wrap));
-
-  document.querySelectorAll('.chart-tab').forEach(btn => {
+  // Обработчик кнопки "Показать все / Свернуть"
+  document.querySelectorAll('[data-product-toggle]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const productId = btn.dataset.productId;
-      const days = parseInt(btn.dataset.days);
-      
-      chartFilters[productId] = days;
-      
-      const product = data.products.find(p => p.id === productId);
-      if (!product) return;
-      
       const productEl = btn.closest('.product');
-      const chartWrap = productEl.querySelector('.chart-wrap');
-      
-      const hist = [...product.history].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const newChartHtml = buildChart(hist, product.id, days);
-      
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = newChartHtml;
-      const newChartEl = tempDiv.firstElementChild;
-      chartWrap.replaceWith(newChartEl);
-      
-      attachChartHover(newChartEl);
+      const tableWrap = productEl.querySelector('.table-wrap');
+      const isExpanded = btn.classList.contains('expanded');
+
+      if (!tableWrap) return;
+
+      if (isExpanded) {
+        // Сворачиваем
+        tableWrap.classList.add('is-collapsed');
+        btn.classList.remove('expanded');
+        btn.querySelector('span').textContent = btn.dataset.originalText;
+      } else {
+        // Разворачиваем
+        tableWrap.classList.remove('is-collapsed');
+        btn.classList.add('expanded');
+        btn.dataset.originalText = btn.querySelector('span').textContent;
+        btn.querySelector('span').textContent = 'Свернуть';
+      }
     });
+  });
+
+  // Навешиваем обработчики на графики и табы
+  document.querySelectorAll('.product').forEach(productEl => {
+    const productId = productEl.querySelector('[data-delete-product]').dataset.deleteProduct;
+    const product = data.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    const chartWrap = productEl.querySelector('.chart-wrap');
+    if (chartWrap) attachChartHover(chartWrap);
+    
+    attachChartTabs(productEl, product);
+  });
+}
+
+// ==================================================
+// ПОИСК
+// ==================================================
+function initSearch() {
+  const input = $('#search-input');
+  const clearBtn = $('#search-clear');
+  if (!input || !clearBtn) return;
+
+  let debounceTimer;
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      searchQuery = input.value.trim().toLowerCase();
+      clearBtn.hidden = !searchQuery;
+      render();
+    }, 200);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    searchQuery = '';
+    clearBtn.hidden = true;
+    render();
   });
 }
 
@@ -1103,6 +1236,7 @@ function openLightbox(src) {
 (async function boot() {
   initThemeToggle();
   initViewToggle();
+  initSearch();
 
   const folderBtn = $('#folder-btn');
   if (folderBtn) folderBtn.onclick = showSetupScreen;
