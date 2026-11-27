@@ -1,43 +1,6 @@
 {
   "products": [
     {
-      "id": "mwkaf9yef067wz",
-      "name": "Bosch MFQ4080 Ручной миксер, 500 Вт",
-      "photo": "photo-1794895477222-mwkaf9wmcrbuup.jpg",
-      "history": [
-        {
-          "id": "mwkaf9ye01xiw1",
-          "price": 8453,
-          "date": "2026-11-17T06:04:37.286Z"
-        },
-        {
-          "id": "mwkt60u16yw6vx",
-          "price": 8435,
-          "date": "2026-11-17T14:49:18.265Z"
-        },
-        {
-          "id": "mwloe07al1oq9g",
-          "price": 8435,
-          "date": "2026-11-18T05:23:18.790Z"
-        },
-        {
-          "id": "mwvtsi1lnb52il",
-          "price": 8435,
-          "date": "2026-11-25T07:52:14.937Z"
-        },
-        {
-          "id": "mwxhq9s34oxxf2",
-          "price": 8453,
-          "date": "2026-11-26T11:50:07.875Z"
-        },
-        {
-          "id": "mwyugldwj2q63p",
-          "price": 8499,
-          "date": "2026-11-27T10:34:17.540Z"
-        }
-      ]
-    },
-    {
       "id": "mwkajzz9h7mqz0",
       "name": "Гидромассажная ванночка Atlanta ATH-6417",
       "photo": "photo-1794895697571-mwkajzxfqp8j9z.jpg",
