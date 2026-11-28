@@ -47,22 +47,22 @@ function analyzePrices(fullHist) {
 
   const now = new Date().getTime();
   const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
-  
+
   let activeHist = fullHist.filter(h => (now - new Date(h.date).getTime()) <= sixtyDaysMs);
   if (activeHist.length < 5 && fullHist.length > activeHist.length) {
-    activeHist = fullHist.slice(-20); 
+    activeHist = fullHist.slice(-20);
   }
   if (activeHist.length === 0) activeHist = fullHist;
 
   const prices = activeHist.map(h => h.price);
   const current = prices.at(-1);
-  
+
   const sortedPrices = [...prices].sort((a, b) => a - b);
   const median = sortedPrices.at(Math.floor(sortedPrices.length / 2));
-  
+
   let cleanPrices = prices.filter(p => p > median * 0.4 && p < median * 2.5);
   let hasAnomaly = cleanPrices.length !== prices.length;
-  
+
   if (cleanPrices.length < 2) {
     cleanPrices = prices;
     hasAnomaly = false;
@@ -78,6 +78,7 @@ function analyzePrices(fullHist) {
   const win = prices.slice(-5);
   let trend = 'flat';
   let trendSlope = 0;
+
   if (win.length >= 2) {
     const n = win.length;
     const xs = Array.from({ length: n }, (_, i) => i);
@@ -87,7 +88,7 @@ function analyzePrices(fullHist) {
     const sumX2 = xs.reduce((s, x) => s + x * x, 0);
     const denom = n * sumX2 - sumX * sumX;
     trendSlope = denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
-    
+
     const rel = avg > 0 ? trendSlope / avg : 0;
     if (rel > 0.005) trend = 'up';
     else if (rel < -0.005) trend = 'down';
@@ -104,7 +105,7 @@ function analyzePrices(fullHist) {
 
   let verdict, advice, color;
   const isCurrentAnomaly = current < median * 0.4;
-  
+
   if (isCurrentAnomaly) {
     verdict = 'Вероятно, акция';
     advice = 'Цена резко ниже обычной. Возможно, разовая распродажа.';
@@ -265,10 +266,10 @@ function attachTooltips() {
 
       const rect = el.getBoundingClientRect();
       const tooltipRect = tooltipEl.getBoundingClientRect();
-      
+
       let top = rect.top - tooltipRect.height - 10;
       let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-      
+
       if (top < 10) {
         top = rect.bottom + 10;
         tooltipEl.classList.add('bottom');
@@ -297,7 +298,6 @@ function attachTooltips() {
     });
   });
 }
-
 // ==================================================
 // GITHUB API + ДАННЫЕ
 // ==================================================
@@ -348,6 +348,7 @@ async function ghRequest(path, options = {}) {
       ...(options.headers || {})
     }
   });
+
   if (!res.ok) {
     if (res.status === 404) return null;
     const errData = await res.json().catch(() => ({}));
@@ -358,28 +359,35 @@ async function ghRequest(path, options = {}) {
 
 async function readDataFile() {
   const fileData = await ghRequest(`${DATA_FILE}?t=${Date.now()}`);
+
   if (!fileData) {
     dataFileSha = null;
     return { products: [] };
   }
+
   dataFileSha = fileData.sha;
   const text = base64ToUtf8(fileData.content.replace(/\n/g, ''));
+
   if (!text.trim()) return { products: [] };
+
   return JSON.parse(text);
 }
 
 async function writeDataFile() {
   const contentBase64 = utf8ToBase64(JSON.stringify(data, null, 2));
+
   const body = {
     message: 'Обновление цен',
     content: contentBase64
   };
+
   if (dataFileSha) body.sha = dataFileSha;
 
   const res = await ghRequest(DATA_FILE, {
     method: 'PUT',
     body: JSON.stringify(body)
   });
+
   if (res && res.content) {
     dataFileSha = res.content.sha;
   }
@@ -388,10 +396,13 @@ async function writeDataFile() {
 function compressImage(file, maxSize = 600, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
     reader.onload = () => {
       const img = new Image();
+
       img.onload = () => {
         let { width, height } = img;
+
         if (width > height && width > maxSize) {
           height = Math.round(height * maxSize / width);
           width = maxSize;
@@ -399,21 +410,26 @@ function compressImage(file, maxSize = 600, quality = 0.82) {
           width = Math.round(width * maxSize / height);
           height = maxSize;
         }
+
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
+
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
+
         canvas.toBlob(blob => {
           if (blob) resolve(blob);
           else reject(new Error('Ошибка сжатия'));
         }, 'image/jpeg', quality);
       };
+
       img.onerror = () => reject(new Error('Не удалось открыть изображение'));
       img.src = reader.result;
     };
+
     reader.onerror = () => reject(new Error('Ошибка чтения файла'));
     reader.readAsDataURL(file);
   });
@@ -423,7 +439,7 @@ async function savePhotoFile(file) {
   const compressed = await compressImage(file);
   const base64 = await blobToBase64(compressed);
   const filename = `photos/photo-${Date.now()}-${uid()}.jpg`;
-  
+
   await ghRequest(filename, {
     method: 'PUT',
     body: JSON.stringify({
@@ -431,12 +447,14 @@ async function savePhotoFile(file) {
       content: base64
     })
   });
+
   return filename;
 }
 
 async function deletePhotoFile(name) {
   try {
     const fileData = await ghRequest(name);
+
     if (fileData && fileData.sha) {
       await ghRequest(name, {
         method: 'DELETE',
@@ -449,12 +467,15 @@ async function deletePhotoFile(name) {
   } catch (e) {
     console.warn('Не удалось удалить фото из GitHub:', e);
   }
+
   photoUrlCache.delete(name);
 }
 
 async function getPhotoURL(filename) {
   if (photoUrlCache.has(filename)) return photoUrlCache.get(filename);
+
   const url = `https://raw.githubusercontent.com/${ghConfig.owner}/${ghConfig.repo}/main/${filename}`;
+
   photoUrlCache.set(filename, url);
   return url;
 }
@@ -465,9 +486,12 @@ async function getPhotoURL(filename) {
 function showSetupScreen() {
   const appScreen = $('#app-screen');
   if (appScreen) appScreen.style.display = 'none';
+
   const setup = $('#setup-screen');
   if (!setup) return;
+
   setup.style.display = 'flex';
+
   setup.innerHTML = `
     <div class="setup-card glass-panel" style="width: 100%; max-width: 460px;">
       <div class="setup-icon">☁️</div>
@@ -478,14 +502,17 @@ function showSetupScreen() {
           <label>Ваш логин GitHub</label>
           <input type="text" id="gh-owner" placeholder="например: Juvka" value="${ghConfig?.owner || ''}" required>
         </div>
+
         <div class="field">
           <label>Название репозитория</label>
           <input type="text" id="gh-repo" placeholder="например: price-tracker" value="${ghConfig?.repo || ''}" required>
         </div>
+
         <div class="field">
           <label>Personal Access Token</label>
           <input type="password" id="gh-token" placeholder="github_pat_..." value="${ghConfig?.token || ''}" required>
         </div>
+
         <button type="submit" class="btn btn-primary" style="justify-content:center; margin-top:8px;">
           <span>Сохранить и подключить</span>
         </button>
@@ -494,11 +521,13 @@ function showSetupScreen() {
 
   $('#gh-setup-form').addEventListener('submit', async e => {
     e.preventDefault();
+
     ghConfig = {
       owner: $('#gh-owner').value.trim(),
       repo: $('#gh-repo').value.trim(),
       token: $('#gh-token').value.trim()
     };
+
     localStorage.setItem('pt-gh-config', JSON.stringify(ghConfig));
     await initApp();
   });
@@ -507,18 +536,22 @@ function showSetupScreen() {
 async function initApp() {
   try {
     toast('Синхронизация с GitHub...');
+
     data = await readDataFile();
     if (!data.products) data.products = [];
 
     const setup = $('#setup-screen');
     const appScreen = $('#app-screen');
+
     if (setup) setup.style.display = 'none';
     if (appScreen) appScreen.style.display = 'block';
+
     const folderBtnText = $('#folder-btn-text');
     if (folderBtnText) folderBtnText.textContent = 'Настройки GitHub';
 
     await render();
     toast('Данные загружены');
+
   } catch (err) {
     console.error(err);
     toast('Ошибка доступа: ' + err.message, true);
@@ -532,6 +565,7 @@ async function initApp() {
 const photoInput = $('#product-photo');
 const photoPreview = $('#photo-preview');
 const photoRemove = $('#photo-remove');
+
 const PLACEHOLDER_IMG = `
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="3"/>
@@ -544,12 +578,16 @@ if (photoInput) {
   photoInput.addEventListener('change', e => {
     const file = e.target.files.item(0);
     if (!file) return;
+
     pendingPhotoFile = file;
+
     const reader = new FileReader();
+
     reader.onload = ev => {
       photoPreview.innerHTML = `<img src="${ev.target.result}" alt="preview">`;
       photoRemove.hidden = false;
     };
+
     reader.readAsDataURL(file);
     e.target.value = '';
   });
@@ -565,21 +603,27 @@ if (photoRemove) {
 
 function resetPhotoPicker() {
   pendingPhotoFile = null;
+
   if (photoPreview) photoPreview.innerHTML = PLACEHOLDER_IMG;
   if (photoRemove) photoRemove.hidden = true;
 }
-
 // ==================================================
 // ДОБАВЛЕНИЕ ТОВАРА
 // ==================================================
 const productForm = $('#product-form');
+
 if (productForm) {
   productForm.addEventListener('submit', async e => {
     e.preventDefault();
-    if (!ghConfig) { toast('Сначала настройте GitHub', true); return; }
+
+    if (!ghConfig) {
+      toast('Сначала настройте GitHub', true);
+      return;
+    }
 
     const name = $('#product-name').value.trim();
     const priceRaw = $('#product-price').value;
+
     if (!name || !priceRaw) return;
 
     const btn = e.target.querySelector('button[type="submit"]');
@@ -587,13 +631,20 @@ if (productForm) {
 
     try {
       let photoName = null;
-      if (pendingPhotoFile) photoName = await savePhotoFile(pendingPhotoFile);
+
+      if (pendingPhotoFile) {
+        photoName = await savePhotoFile(pendingPhotoFile);
+      }
 
       data.products.push({
         id: uid(),
         name,
         photo: photoName,
-        history: [{ id: uid(), price: parseFloat(priceRaw), date: new Date().toISOString() }]
+        history: [{
+          id: uid(),
+          price: parseFloat(priceRaw),
+          date: new Date().toISOString()
+        }]
       });
 
       await writeDataFile();
@@ -601,9 +652,11 @@ if (productForm) {
       resetPhotoPicker();
       await render();
       toast('Товар добавлен');
+
     } catch (err) {
       console.error(err);
       toast('Ошибка: ' + err.message, true);
+
     } finally {
       btn.disabled = false;
     }
@@ -623,11 +676,14 @@ function buildChart(hist, productId, activeFilterMs = 0) {
 
   let filteredHist = [...hist];
   let isFallback = false;
-  
+
   if (activeFilterMs > 0) {
     const cutoff = Date.now() - activeFilterMs;
-    filteredHist = hist.filter(h => new Date(h.date).getTime() >= cutoff);
-    
+
+    filteredHist = hist.filter(h =>
+      new Date(h.date).getTime() >= cutoff
+    );
+
     if (filteredHist.length < 2) {
       filteredHist = [...hist];
       isFallback = true;
@@ -637,14 +693,22 @@ function buildChart(hist, productId, activeFilterMs = 0) {
   const prices = filteredHist.map(h => h.price);
   const firstPrice = prices.at(0);
   const lastPrice = prices.at(-1);
+
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const range = max - min || 1;
 
   const periodDiff = lastPrice - firstPrice;
-  const periodPct = firstPrice ? ((periodDiff / firstPrice) * 100).toFixed(1) : '0.0';
+  const periodPct = firstPrice
+    ? ((periodDiff / firstPrice) * 100).toFixed(1)
+    : '0.0';
+
   const periodSign = periodDiff > 0 ? '+' : '';
-  const periodClass = periodDiff > 0 ? 'up' : periodDiff < 0 ? 'down' : 'flat';
+  const periodClass = periodDiff > 0
+    ? 'up'
+    : periodDiff < 0
+      ? 'down'
+      : 'flat';
 
   const W = 320;
   const H = 135;
@@ -652,23 +716,34 @@ function buildChart(hist, productId, activeFilterMs = 0) {
   const PAD_R = 14;
   const PAD_T = 22;
   const PAD_B = 22;
+
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
 
   const pts = prices.map((p, i) => {
     const x = PAD_L + (i / (prices.length - 1)) * plotW;
     const y = PAD_T + plotH - ((p - min) / range) * plotH;
-    return { x, y, price: p, date: filteredHist.at(i).date };
+
+    return {
+      x,
+      y,
+      price: p,
+      date: filteredHist.at(i).date
+    };
   });
 
   let linePath = `M${pts.at(0).x.toFixed(2)},${pts.at(0).y.toFixed(2)}`;
+
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts.at(i);
     const p1 = pts.at(i + 1);
     const cx = (p0.x + p1.x) / 2;
+
     linePath += ` C${cx.toFixed(2)},${p0.y.toFixed(2)} ${cx.toFixed(2)},${p1.y.toFixed(2)} ${p1.x.toFixed(2)},${p1.y.toFixed(2)}`;
   }
+
   const bottomY = H - PAD_B + 10;
+
   const areaPath = `${linePath} L${pts.at(-1).x.toFixed(2)},${bottomY} L${pts.at(0).x.toFixed(2)},${bottomY} Z`;
 
   const gid = 'g-' + productId;
@@ -676,13 +751,16 @@ function buildChart(hist, productId, activeFilterMs = 0) {
 
   const minIdx = prices.indexOf(min);
   const maxIdx = prices.lastIndexOf(max);
+
   const minPt = pts.at(minIdx);
   const maxPt = pts.at(maxIdx);
 
   let extremaHtml = '';
+
   if (max !== min) {
     const maxLeft = Math.max(8, Math.min(92, (maxPt.x / W) * 100));
     const maxTop = (maxPt.y / H) * 100;
+
     const minLeft = Math.max(8, Math.min(92, (minPt.x / W) * 100));
     const minTop = (minPt.y / H) * 100;
 
@@ -697,10 +775,14 @@ function buildChart(hist, productId, activeFilterMs = 0) {
   const hoverZones = pts.map((pt, i) => {
     const zoneW = plotW / (pts.length - 1);
     const diffFromStart = pt.price - firstPrice;
-    const pctFromStart = firstPrice ? ((diffFromStart / firstPrice) * 100).toFixed(1) : '0.0';
+
+    const pctFromStart = firstPrice
+      ? ((diffFromStart / firstPrice) * 100).toFixed(1)
+      : '0.0';
+
     return `
-      <rect class="chart-hover-zone" 
-            data-x="${pt.x}" data-y="${pt.y}" 
+      <rect class="chart-hover-zone"
+        data-x="${pt.x}" data-y="${pt.y}"
             data-x-pct="${(pt.x / W) * 100}" data-y-pct="${(pt.y / H) * 100}"
             data-price="${pt.price}" data-date="${pt.date}"
             data-diff="${diffFromStart}" data-pct="${pctFromStart}"
@@ -709,8 +791,8 @@ function buildChart(hist, productId, activeFilterMs = 0) {
   }).join('');
 
   const tabsHtml = FILTER_OPTIONS.map(opt => `
-    <button class="chart-tab ${activeFilterMs === opt.ms ? 'active' : ''}" 
-            data-product-id="${productId}" 
+    <button class="chart-tab ${activeFilterMs === opt.ms ? 'active' : ''}"
+            data-product-id="${productId}"
             data-ms="${opt.ms}">
       ${opt.label}
     </button>
@@ -725,9 +807,10 @@ function buildChart(hist, productId, activeFilterMs = 0) {
             ${periodSign}${formatPriceShort(periodDiff)} (${periodSign}${periodPct}%)
           </span>
         </div>
+
         <div class="chart-tabs">${tabsHtml}</div>
       </div>
-      
+
       <div class="chart-canvas">
         <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:100%;">
           <defs>
@@ -735,6 +818,7 @@ function buildChart(hist, productId, activeFilterMs = 0) {
               <stop offset="0%" stop-color="var(--accent-2)"/>
               <stop offset="100%" stop-color="var(--accent)"/>
             </linearGradient>
+
             <linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.32"/>
               <stop offset="85%" stop-color="var(--accent-2)" stop-opacity="0.04"/>
@@ -776,8 +860,6 @@ function buildChart(hist, productId, activeFilterMs = 0) {
       </div>
     </div>`;
 }
-
-// ==================================================
 // РЕНДЕР
 // ==================================================
 async function render() {
@@ -793,7 +875,7 @@ async function render() {
     return;
   }
 
-  const filtered = data.products.filter(p => 
+  const filtered = data.products.filter(p =>
     !searchQuery || p.name.toLowerCase().includes(searchQuery)
   );
 
@@ -807,6 +889,7 @@ async function render() {
   }
 
   const photoUrls = new Map();
+
   for (const p of filtered) {
     if (p.photo) {
       const url = await getPhotoURL(p.photo);
@@ -814,8 +897,10 @@ async function render() {
     }
   }
 
-  container.innerHTML = filtered.map(p => renderProduct(p, photoUrls.get(p.id))).join('');
-  
+  container.innerHTML = filtered.map(p =>
+    renderProduct(p, photoUrls.get(p.id))
+  ).join('');
+
   // Ждем кадр, чтобы DOM отрендерился
   requestAnimationFrame(() => {
     attachHandlers();
@@ -826,21 +911,28 @@ async function render() {
 }
 
 function renderProduct(product, photoURL) {
-  const hist = [...product.history].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const hist = [...product.history].sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
+
   const current = hist.at(-1).price;
   const first = hist.at(0).price;
   const maxPrice = Math.max(...hist.map(h => h.price));
   const minPrice = Math.min(...hist.map(h => h.price));
-  
+
   const analysis = analyzePrices(hist);
 
   const diff = current - first;
-  const diffPercent = first ? ((diff / first) * 100).toFixed(1) : '0.0';
+  const diffPercent = first
+    ? ((diff / first) * 100).toFixed(1)
+    : '0.0';
+
   const diffClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
   const diffSign = diff > 0 ? '+' : '';
 
   const savedFilterMs = Number(localStorage.getItem(`pt-filter-${product.id}`));
   const activeFilterMs = !isNaN(savedFilterMs) ? savedFilterMs : 0;
+
   const chart = buildChart(hist, product.id, activeFilterMs);
 
   const thumb = photoURL
@@ -862,6 +954,7 @@ function renderProduct(product, photoURL) {
 
   const rows = allRowsReversed.map((h, index) => {
     const hiddenClass = index >= 3 ? 'hidden-row' : '';
+
     return `
       <tr class="${hiddenClass}">
         <td class="date-cell">${formatDate(h.date)}</td>
@@ -874,7 +967,7 @@ function renderProduct(product, photoURL) {
 
   const toggleBtnHtml = hasMore
     ? `<div class="history-toggle-wrap">
-         <button class="history-toggle-btn" data-product-toggle="${product.id}">
+         <button class="history-toggle-btn" data-product-toggle="${product.id}" aria-expanded="false">
            <span>Показать все (${allRowsReversed.length})</span>
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
              <polyline points="6 9 12 15 18 9"/>
@@ -916,6 +1009,7 @@ function renderProduct(product, photoURL) {
             </div>
           </div>
         </div>
+
         <button class="del-product" data-delete-product="${product.id}" data-tooltip="Удалить весь товар">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/>
@@ -929,18 +1023,22 @@ function renderProduct(product, photoURL) {
           <span class="stat-label">Текущая</span>
           <span class="stat-value">${formatPrice(current)}</span>
         </div>
+
         <div class="stat">
           <span class="stat-label">Минимум</span>
           <span class="stat-value">${formatPrice(minPrice)}</span>
         </div>
+
         <div class="stat">
           <span class="stat-label">Средняя</span>
           <span class="stat-value">${formatPrice(analysis ? analysis.avg : first)}</span>
         </div>
+
         <div class="stat">
           <span class="stat-label">Максимум</span>
           <span class="stat-value">${formatPrice(maxPrice)}</span>
         </div>
+
         <div class="stat">
           <span class="stat-label">Тренд</span>
           <span class="stat-value trend-value ${analysis ? analysis.trend : 'flat'}">${trendLabel(analysis)}</span>
@@ -963,247 +1061,200 @@ function renderProduct(product, photoURL) {
 
       <div class="table-wrap ${hasMore ? 'is-collapsed' : ''}" data-product-table="${product.id}">
         <table>
-          <thead><tr><th>Дата и время</th><th>Цена</th><th></th></tr></thead>
+          <thead>
+            <tr><th>Дата и время</th><th>Цена</th><th></th></tr>
+          </thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
+
       ${toggleBtnHtml}
     </article>`;
 }
-
 // ==================================================
-// ОБРАБОТЧИКИ
+// ОБРАБОТЧИКИ ВСЕХ КНОПОК
 // ==================================================
-function attachChartHover(wrap) {
-  const svg = wrap.querySelector('svg');
-  const tooltip = wrap.querySelector('.chart-tooltip');
-  const interaction = wrap.querySelector('.chart-interaction');
-  const hoverLine = wrap.querySelector('.chart-hover-line');
-  const ttPrice = wrap.querySelector('.tt-price');
-  const ttDiff = wrap.querySelector('.tt-diff');
-  const ttDate = wrap.querySelector('.tt-date');
-  
-  if (!svg || !tooltip) return;
-  const zones = wrap.querySelectorAll('.chart-hover-zone');
-
-  const showPoint = (zone) => {
-    interaction.style.display = 'block';
-    tooltip.style.display = 'flex';
-
-    const x = parseFloat(zone.dataset.x);
-    const xPct = parseFloat(zone.dataset.xPct);
-    const yPct = parseFloat(zone.dataset.yPct);
-    const price = parseFloat(zone.dataset.price);
-    const diff = parseFloat(zone.dataset.diff);
-    const pct = zone.dataset.pct;
-    const date = zone.dataset.date;
-
-    hoverLine.setAttribute('x1', x);
-    hoverLine.setAttribute('x2', x);
-
-    ttPrice.textContent = formatPrice(price);
-    ttDate.textContent = formatDate(date);
-
-    if (diff === 0) {
-      ttDiff.textContent = 'старт';
-      ttDiff.className = 'tt-diff flat';
-    } else {
-      const sign = diff > 0 ? '+' : '';
-      ttDiff.textContent = `${sign}${pct}%`;
-      ttDiff.className = `tt-diff ${diff > 0 ? 'up' : 'down'}`;
-    }
-
-    const clampedX = Math.max(18, Math.min(82, xPct));
-    tooltip.style.left = `${clampedX}%`;
-    
-    if (yPct < 38) {
-      tooltip.style.top = `${yPct + 12}%`;
-      tooltip.classList.add('below');
-    } else {
-      tooltip.style.top = `${yPct - 10}%`;
-      tooltip.classList.remove('below');
-    }
-  };
-
-  zones.forEach(zone => {
-    zone.addEventListener('mouseenter', () => showPoint(zone));
-    zone.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      showPoint(zone);
-    }, { passive: false });
-  });
-
-  svg.addEventListener('mouseleave', () => {
-    interaction.style.display = 'none';
-    tooltip.style.display = 'none';
-  });
-}
-
-function attachChartTabs(productEl, product) {
-  productEl.querySelectorAll('.chart-tab').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const ms = parseInt(btn.dataset.ms);
-      
-      localStorage.setItem(`pt-filter-${product.id}`, ms);
-      
-      const chartWrap = productEl.querySelector('.chart-wrap');
-      const hist = [...product.history].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const newChartHtml = buildChart(hist, product.id, ms);
-      
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = newChartHtml;
-      const newChartEl = tempDiv.firstElementChild;
-      
-      chartWrap.replaceWith(newChartEl);
-      
-      attachChartHover(newChartEl);
-      attachChartTabs(productEl, product);
-    });
-  });
-}
-
-function initTableHeights() {
-  document.querySelectorAll('.product').forEach(productEl => {
-    const tableWrap = productEl.querySelector('.table-wrap');
-    if (tableWrap && tableWrap.classList.contains('is-collapsed')) {
-      const thead = tableWrap.querySelector('thead');
-      const tbody = tableWrap.querySelector('tbody');
-      if (thead && tbody) {
-        const headerHeight = thead.offsetHeight;
-        const rows = tbody.querySelectorAll('tr');
-        let threeRowsHeight = 0;
-        // Берем высоту первых трех строк
-        for (let i = 0; i < Math.min(3, rows.length); i++) {
-          threeRowsHeight += rows[i].offsetHeight;
-        }
-        // Добавляем 1px для границы, чтобы 3-я строка не обрезалась
-        const collapsedHeight = headerHeight + threeRowsHeight + 1;
-        tableWrap.style.setProperty('--collapsed-height', collapsedHeight + 'px');
-      }
-    }
-  });
-}
-
 function attachHandlers() {
+
+  // Добавление новой цены
   document.querySelectorAll('.add-price-form').forEach(form => {
     form.addEventListener('submit', async e => {
       e.preventDefault();
+
       const productId = form.dataset.product;
       const input = form.querySelector('input');
       const price = parseFloat(input.value);
-      if (isNaN(price)) return;
+
+      if (isNaN(price) || price < 0) return;
 
       const btn = form.querySelector('button');
       btn.disabled = true;
+
       try {
         const product = data.products.find(p => p.id === productId);
         if (!product) return;
-        product.history.push({ id: uid(), price, date: new Date().toISOString() });
+
+        product.history.push({
+          id: uid(),
+          price,
+          date: new Date().toISOString()
+        });
         await writeDataFile();
         await render();
         toast('Цена записана');
+
       } catch (err) {
+        console.error(err);
         toast('Ошибка: ' + err.message, true);
+
       } finally {
         btn.disabled = false;
       }
     });
   });
 
+  // Удаление товара
   document.querySelectorAll('[data-delete-product]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.deleteProduct;
       const product = data.products.find(p => p.id === id);
+
       if (!product) return;
+
       if (!confirm(`Удалить товар "${product.name}" со всей историей и фото?`)) return;
 
       try {
-        if (product.photo) await deletePhotoFile(product.photo);
+        if (product.photo) {
+          await deletePhotoFile(product.photo);
+        }
+
         data.products = data.products.filter(p => p.id !== id);
+
         await writeDataFile();
         await render();
         toast('Товар удалён');
+
       } catch (err) {
+        console.error(err);
         toast('Ошибка: ' + err.message, true);
       }
     });
   });
 
+  // Удаление отдельной записи цены
   document.querySelectorAll('.delete-price').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const { product: pid, entry: eid } = btn.dataset;
+      const pid = btn.dataset.product;
+      const eid = btn.dataset.entry;
+
       const product = data.products.find(p => p.id === pid);
       if (!product) return;
+
       if (product.history.length <= 1) {
         toast('Нельзя удалить последнюю запись', true);
         return;
       }
+
       try {
         product.history = product.history.filter(h => h.id !== eid);
+
         await writeDataFile();
         await render();
         toast('Запись удалена');
+
       } catch (err) {
+        console.error(err);
         toast('Ошибка: ' + err.message, true);
       }
     });
   });
 
+  // Увеличение фотографии
   document.querySelectorAll('[data-lightbox]').forEach(el => {
-    el.addEventListener('click', () => openLightbox(el.dataset.lightbox));
+    el.addEventListener('click', () => {
+      openLightbox(el.dataset.lightbox);
+    });
   });
 
-  // Обработчик кнопки "Показать все / Свернуть"
+  // ==================================================
+  // ПОКАЗАТЬ ВСЕ / СВЕРНУТЬ
+  // ==================================================
   document.querySelectorAll('[data-product-toggle]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', e => {
       e.preventDefault();
+
       const productEl = btn.closest('.product');
+      if (!productEl) return;
+
       const tableWrap = productEl.querySelector('.table-wrap');
+      const label = btn.querySelector('span');
+
+      if (!tableWrap || !label) return;
+
+      const rows = tableWrap.querySelectorAll('tbody tr');
       const isExpanded = btn.classList.contains('expanded');
 
-      if (!tableWrap) return;
+      if (!isExpanded) {
+        // РАСКРЫТИЕ
+        btn.dataset.originalText = label.textContent;
 
-      if (isExpanded) {
-        // Сворачиваем
-        tableWrap.classList.add('is-collapsed');
-        btn.classList.remove('expanded');
-        btn.querySelector('span').textContent = btn.dataset.originalText;
-      } else {
-        // Разворачиваем
+        rows.forEach(row => {
+          row.classList.remove('hidden-row');
+        });
+
         tableWrap.classList.remove('is-collapsed');
         btn.classList.add('expanded');
-        btn.dataset.originalText = btn.querySelector('span').textContent;
-        btn.querySelector('span').textContent = 'Свернуть';
+        btn.setAttribute('aria-expanded', 'true');
+
+        label.textContent = 'Свернуть';
+
+      } else {
+        // СВОРАЧИВАНИЕ
+        rows.forEach((row, index) => {
+          row.classList.toggle('hidden-row', index >= 3);
+        });
+
+        tableWrap.classList.add('is-collapsed');
+        btn.classList.remove('expanded');
+        btn.setAttribute('aria-expanded', 'false');
+
+        label.textContent = btn.dataset.originalText || 'Показать все';
       }
     });
   });
 
-  // Навешиваем обработчики на графики и табы
+  // ГРАФИКИ
+  // ==================================================
   document.querySelectorAll('.product').forEach(productEl => {
-    const productId = productEl.querySelector('[data-delete-product]').dataset.deleteProduct;
+    const deleteButton = productEl.querySelector('[data-delete-product]');
+    if (!deleteButton) return;
+
+    const productId = deleteButton.dataset.deleteProduct;
     const product = data.products.find(p => p.id === productId);
+
     if (!product) return;
-    
+
     const chartWrap = productEl.querySelector('.chart-wrap');
-    if (chartWrap) attachChartHover(chartWrap);
-    
+    if (chartWrap) {
+      attachChartHover(chartWrap);
+    }
+
     attachChartTabs(productEl, product);
   });
 }
-
-// ==================================================
 // ПОИСК
 // ==================================================
 function initSearch() {
   const input = $('#search-input');
   const clearBtn = $('#search-clear');
+
   if (!input || !clearBtn) return;
 
   let debounceTimer;
 
   input.addEventListener('input', () => {
     clearTimeout(debounceTimer);
+
     debounceTimer = setTimeout(() => {
       searchQuery = input.value.trim().toLowerCase();
       clearBtn.hidden = !searchQuery;
@@ -1219,14 +1270,16 @@ function initSearch() {
   });
 }
 
-// ==================================================
+
 // LIGHTBOX
 // ==================================================
 function openLightbox(src) {
   const lb = document.createElement('div');
   lb.className = 'lightbox show';
   lb.innerHTML = `<img src="${src}" alt="">`;
+
   lb.addEventListener('click', () => lb.remove());
+
   document.body.appendChild(lb);
 }
 
@@ -1239,7 +1292,10 @@ function openLightbox(src) {
   initSearch();
 
   const folderBtn = $('#folder-btn');
-  if (folderBtn) folderBtn.onclick = showSetupScreen;
+
+  if (folderBtn) {
+    folderBtn.onclick = showSetupScreen;
+  }
 
   if (ghConfig && ghConfig.owner && ghConfig.repo && ghConfig.token) {
     await initApp();
